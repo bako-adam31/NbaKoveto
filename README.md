@@ -37,7 +37,7 @@ cp server/.env.example server/.env
 cp client/.env.example client/.env
 ```
 
-Edit `.env` values as needed. `CORS_ORIGINS` is a comma-separated allowlist; `CORS_ORIGIN_REGEX` permits local development hosts with Vite's alternate port if the default port is occupied. `UPSTREAM_TIMEOUT_SECONDS`, `UPSTREAM_MIN_INTERVAL_SECONDS`, `CACHE_TTL_SECONDS`, and `PLAYER_STATS_CACHE_TTL_SECONDS` tune upstream behavior. The browser only needs `VITE_API_BASE_URL` (default `http://127.0.0.1:8000`). No credentials are required or exposed.
+Edit `.env` values as needed. `CORS_ORIGINS` is a comma-separated allowlist; `CORS_ORIGIN_REGEX` permits local development hosts with Vite's alternate port if the default port is occupied. `UPSTREAM_TIMEOUT_SECONDS`, `UPSTREAM_MIN_INTERVAL_SECONDS`, `CACHE_TTL_SECONDS`, and `PLAYER_STATS_CACHE_TTL_SECONDS` tune upstream behavior. During local Vite development, the browser uses `http://127.0.0.1:8000` by default; `VITE_API_BASE_URL` can override it. In a production build, set `VITE_API_BASE_URL` to the public API origin. Production builds do not fall back to localhost. No credentials are required or exposed.
 
 ## Start
 
@@ -60,6 +60,38 @@ Production frontend build:
 npm run build
 ```
 
+## Deploying the frontend and API
+
+The frontend and FastAPI API are separate deployments. The frontend is hosted at `https://nba-koveto.vercel.app`; set the API's actual public origin after creating the Render service. Do not include `/api` or a trailing slash in `VITE_API_BASE_URL`.
+
+In Vercel, add this environment variable for the **Production** environment (and Preview too if previews should use the same API):
+
+- `VITE_API_BASE_URL` = the actual public origin assigned to the FastAPI Render service. This value is intentionally not included in the repository.
+
+Redeploy the frontend after changing Vercel environment variables because Vite embeds them at build time. If the value is not configured, the production build does not target localhost; API calls use the frontend origin and will fail until the variable is set.
+
+For Render, create a Web Service with the repository's `server` directory as its root. Use `pip install -r requirements.txt` as the build command and `sh start.sh` as the start command. The start script binds to `0.0.0.0` and uses Render's assigned `PORT`, with port `8000` as a local fallback. Set these Render environment variables:
+
+- `CORS_ORIGINS` = `https://nba-koveto.vercel.app,http://localhost:5173,http://127.0.0.1:5173`
+- `CORS_ORIGIN_REGEX` = `https?://(localhost|127\.0\.0\.1)(:\d+)?` (keeps the optional-port allowance limited to local development)
+- `UPSTREAM_TIMEOUT_SECONDS` = `12` (optional; default shown)
+- `UPSTREAM_MIN_INTERVAL_SECONDS` = `0.6` (optional; default shown)
+- `CACHE_TTL_SECONDS` = `45` (optional; default shown)
+- `PLAYER_STATS_CACHE_TTL_SECONDS` = `300` (optional; default shown)
+
+Render supplies `PORT`; the application reads it through `start.sh`. No Render URL is hardcoded in source. Once Render gives you the service origin, use that same origin in Vercel's `VITE_API_BASE_URL`.
+
+To verify the public deployment after configuration, open `https://<your-render-service-origin>/api/health` and confirm it returns JSON with `"status":"ok"`. Then check `https://<your-render-service-origin>/api/games` and open the Vercel site; the browser's Network panel should show API requests going to that Render origin without CORS errors. This repository does not claim the public backend works until an actual Render URL is configured and those requests are tested.
+
+For local presentation use, from the repository root run:
+
+```sh
+npm run install:all   # first-time setup only
+npm run dev
+```
+
+Open `http://127.0.0.1:5173`; the API health endpoint is `http://127.0.0.1:8000/api/health`. The local API starts bound to `127.0.0.1:8000`, and the frontend uses that default automatically unless `VITE_API_BASE_URL` is overridden in `client/.env`.
+
 ## API
 
 The full `/games` page shares the Games dropdown's `GET /api/games/window` request and local date range. Completed games link by their 10-digit NBA game ID to `/games/{game_id}`. That endpoint uses `BoxScoreSummaryV3` for final status, score, arena, and period scoring and `BoxScoreTraditionalV3` for player statistics. It rejects non-final games, caches completed details for one day, and returns final summary data even when the traditional player box score is temporarily unavailable. Player rows preserve the provider's DNP comments and include inactive players when the summary response lists them. The frontend reuses the site's NBA CDN player headshot helper and backend team-logo proxy.
@@ -75,5 +107,5 @@ The full `/games` page shares the Games dropdown's `GET /api/games/window` reque
 - `LeagueDashPlayerStats` depends on the same unofficial stats.nba.com service and can be blocked, delayed, or unavailable. The Players page surfaces the backend error and retry action rather than substituting sample leaders.
 - Scores remain null until the upstream line score contains them. No score, live state, or statistical result is fabricated.
 - If the scoreboard reports an upstream error, retry after a short pause. If it consistently times out or returns blocked, check the FastAPI terminal log and try another network/hosting egress; do not increase request frequency.
-- If the browser reports a CORS error, add the exact frontend origin to `CORS_ORIGINS` and restart the API. If the API is unreachable, confirm it is listening on port 8000 and that `VITE_API_BASE_URL` matches.
+- If the browser reports a CORS error, add the exact frontend origin to `CORS_ORIGINS` and restart or redeploy the API. If the API is unreachable locally, confirm it is listening on port 8000; in production, confirm Vercel's `VITE_API_BASE_URL` is set to the actual public API origin and redeploy the frontend.
 - Player profile pages, standings, and play-by-play remain later milestones. Individual players in roster and game box scores are not linked to profile pages.

@@ -10,7 +10,14 @@ from .services.nba import UpstreamError, current_nba_season, fetch_game_details,
 
 load_dotenv()
 app = FastAPI(title="The Daily Dunk API", version="0.1.0")
-origins = [x.strip() for x in os.getenv("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",") if x.strip()]
+origins = [
+    x.strip()
+    for x in os.getenv(
+        "CORS_ORIGINS",
+        "http://localhost:5173,http://127.0.0.1:5173,https://nba-koveto.vercel.app",
+    ).split(",")
+    if x.strip()
+]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,

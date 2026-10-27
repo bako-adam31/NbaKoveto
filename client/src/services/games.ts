@@ -2,7 +2,11 @@ import type { GameDetailsResponse, GamesResponse } from '../types/game';
 import type { GamesWindowResponse, TeamsResponse } from '../types/game';
 import type { TeamRosterResponse } from '../types/game';
 import type { PlayerLeadersResponse } from '../types/game';
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000';
+const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/+$/, '');
+
+// Keep the convenient local backend default during Vite development. A production
+// build must be pointed at its deployed API explicitly via VITE_API_BASE_URL.
+export const API_BASE_URL = configuredApiBaseUrl || (import.meta.env.DEV ? 'http://127.0.0.1:8000' : '');
 const WINDOW_TTL_MS = 45_000;
 const TEAMS_TTL_MS = 60 * 60_000;
 const windowCache = new Map<string, { expiresAt: number; data: GamesWindowResponse }>();
