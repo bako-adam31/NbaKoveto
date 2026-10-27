@@ -1,0 +1,12 @@
+{
+  "name": "the-daily-dunk",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -k -n api,web -c yellow,cyan \"npm:dev:server\" \"npm:dev:client\"",
+    "dev:server": "cd server && .venv/bin/uvicorn src.main:app --reload --host 127.0.0.1 --port 8000",
+    "dev:client": "npm --prefix client run dev",
+    "build": "npm --prefix client run build",
+    "install:all": "npm install && python3 -m venv server/.venv && server/.venv/bin/pip install -r server/requirements.txt && npm --prefix client install"
+  },
+  "devDependencies": {"concurrently":"^9.1.2"}
+}
