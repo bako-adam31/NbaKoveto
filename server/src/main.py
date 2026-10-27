@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 
-from .services.nba import UpstreamError, current_nba_season, fetch_games, fetch_games_window, fetch_player_leaders, fetch_team_logo, fetch_team_roster, get_nba_teams
+from .services.nba import UpstreamError, current_nba_season, fetch_game_details, fetch_games, fetch_games_window, fetch_player_leaders, fetch_player_profile, fetch_player_search, fetch_standings, fetch_team_logo, fetch_team_roster, fetch_team_statistics, get_nba_teams
 
 load_dotenv()
 app = FastAPI(title="The Daily Dunk API", version="0.1.0")
@@ -39,6 +39,58 @@ def player_leaders(season: str | None = Query(default=None, pattern=r"^\d{4}-\d{
             int(os.getenv("UPSTREAM_TIMEOUT_SECONDS", "12")),
         )
         return {"season": selected_season, "perMode": "PerGame", "players": players}
+    except UpstreamError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+
+
+@app.get("/api/players/search")
+def player_search(
+    q: str = Query(min_length=2, max_length=80),
+    season: str | None = Query(default=None, pattern=r"^\d{4}-\d{2}$"),
+):
+    selected_season = season or current_nba_season()
+    try:
+        return {"season": selected_season, "players": fetch_player_search(
+            q, selected_season, int(os.getenv("UPSTREAM_TIMEOUT_SECONDS", "12"))
+        )}
+    except UpstreamError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+
+
+@app.get("/api/players/{player_id}")
+def player_profile(
+    player_id: int,
+    season: str | None = Query(default=None, pattern=r"^\d{4}-\d{2}$"),
+):
+    selected_season = season or current_nba_season()
+    try:
+        return fetch_player_profile(
+            player_id, selected_season, int(os.getenv("UPSTREAM_TIMEOUT_SECONDS", "12"))
+        )
+    except UpstreamError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+
+
+@app.get("/api/teams/stats")
+def team_statistics(season: str | None = Query(default=None, pattern=r"^\d{4}-\d{2}$")):
+    selected_season = season or current_nba_season()
+    try:
+        return fetch_team_statistics(
+            selected_season,
+            int(os.getenv("UPSTREAM_TIMEOUT_SECONDS", "12")),
+        )
+    except UpstreamError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+
+
+@app.get("/api/standings")
+def standings(season: str | None = Query(default=None, pattern=r"^\d{4}-\d{2}$")):
+    selected_season = season or current_nba_season()
+    try:
+        return fetch_standings(
+            selected_season,
+            int(os.getenv("UPSTREAM_TIMEOUT_SECONDS", "12")),
+        )
     except UpstreamError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
 
@@ -115,5 +167,13 @@ def games_window(
             "timezone": timezone_name,
             "games": result,
         }
+    except UpstreamError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+
+
+@app.get("/api/games/{game_id}")
+def game_details(game_id: str):
+    try:
+        return fetch_game_details(game_id, int(os.getenv("UPSTREAM_TIMEOUT_SECONDS", "12")))
     except UpstreamError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc

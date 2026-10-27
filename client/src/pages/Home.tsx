@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useGames } from "../hooks/useGames";
 import { GameCard } from "../components/GameCard";
+import { HomeStandings } from "../components/HomeStandings";
 
 function localDate(d: Date) {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -193,6 +194,7 @@ export function Home() {
           <span>MORE OF THE GAME, COMING SOON</span>
         </div>
       </section>
+      <HomeStandings />
       <footer>
         <div className="footer-brand">
           THE DAILY <b>DUNK</b>

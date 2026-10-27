@@ -61,12 +61,12 @@ function GameRow({ game }: { game: Game }) {
     game.status === "scheduled"
       ? (localTime ?? "Time TBD")
       : game.statusText || status;
-  const hasScore = game.status !== "scheduled";
+  const hasScore = game.status === "live" || game.status === "final";
   return (
     <article
       className={`nav-game-row ${game.status}`}
       tabIndex={0}
-      aria-label={`${game.awayTeam.name} at ${game.homeTeam.name}. ${status}. ${statusText}.`}
+      aria-label={`${game.awayTeam.name}${hasScore ? ` ${game.awayTeam.score ?? "unavailable"}` : ""} versus ${game.homeTeam.name}${hasScore ? ` ${game.homeTeam.score ?? "unavailable"}` : ""}. ${status}. ${statusText}.`}
     >
       <div className="nav-game-time">
         <span className={`nav-game-status ${game.status}`}>{status}</span>
@@ -75,13 +75,14 @@ function GameRow({ game }: { game: Game }) {
       <div className="nav-game-teams">
         <div className="nav-game-team">
           <TeamMark team={game.awayTeam} />
-          <span title={game.awayTeam.name}>{game.awayTeam.abbreviation}</span>
-          <strong>{hasScore ? (game.awayTeam.score ?? "—") : ""}</strong>
+          <span className="nav-game-name" title={game.awayTeam.name}>{game.awayTeam.name}</span>
+          {hasScore && <strong>{game.awayTeam.score ?? "—"}</strong>}
         </div>
-        <div className="nav-game-team">
+        <span className="nav-game-score-separator" aria-hidden="true">-</span>
+        <div className="nav-game-team home">
+          {hasScore && <strong>{game.homeTeam.score ?? "—"}</strong>}
+          <span className="nav-game-name" title={game.homeTeam.name}>{game.homeTeam.name}</span>
           <TeamMark team={game.homeTeam} />
-          <span title={game.homeTeam.name}>{game.homeTeam.abbreviation}</span>
-          <strong>{hasScore ? (game.homeTeam.score ?? "—") : ""}</strong>
         </div>
       </div>
     </article>

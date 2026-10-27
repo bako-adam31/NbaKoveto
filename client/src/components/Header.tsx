@@ -77,7 +77,7 @@ export function Header() {
     if (window.matchMedia("(hover: hover)").matches) setOpenDropdown(null);
   };
   const activeClass = (path: string) =>
-    location.pathname === path || (path === "/teams" && location.pathname.startsWith("/teams/")) ? "nav-link active" : "nav-link";
+    location.pathname === path || location.pathname.startsWith(`${path}/`) ? "nav-link active" : "nav-link";
 
   return (
     <header className="site-header" ref={headerRef}>

@@ -1,4 +1,4 @@
-import type { GamesResponse } from '../types/game';
+import type { GameDetailsResponse, GamesResponse } from '../types/game';
 import type { GamesWindowResponse, TeamsResponse } from '../types/game';
 import type { TeamRosterResponse } from '../types/game';
 import type { PlayerLeadersResponse } from '../types/game';
@@ -12,6 +12,7 @@ let teamsRequest: Promise<TeamsResponse> | null = null;
 const rosterCache = new Map<string, { expiresAt: number; data: TeamRosterResponse }>();
 const playerLeadersCache = new Map<string, { expiresAt: number; data: PlayerLeadersResponse }>();
 const playerLeadersRequests = new Map<string, Promise<PlayerLeadersResponse>>();
+const gameDetailsCache = new Map<string, { expiresAt: number; data: GameDetailsResponse }>();
 
 async function responseJson<T>(response: Response, fallback: string): Promise<T> {
   if (!response.ok) {
@@ -40,6 +41,15 @@ export function getGamesWindow(startDate: string, timezone: string): Promise<Gam
     .finally(() => windowRequests.delete(key));
   windowRequests.set(key, request);
   return request;
+}
+
+export async function getGameDetails(gameId: string, signal?: AbortSignal): Promise<GameDetailsResponse> {
+  const cached = gameDetailsCache.get(gameId);
+  if (cached && cached.expiresAt > Date.now()) return cached.data;
+  const response = await fetch(`${API_BASE_URL}/api/games/${encodeURIComponent(gameId)}`, { signal });
+  const data = await responseJson<GameDetailsResponse>(response, 'We couldn’t load this game’s box score. Please try again.');
+  if (!data.boxScoreError) gameDetailsCache.set(gameId, { expiresAt: Date.now() + 10 * 60_000, data });
+  return data;
 }
 
 export function getTeams(): Promise<TeamsResponse> {
